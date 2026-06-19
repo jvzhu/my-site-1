@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <records>
+    <record>
+      <ref-type name="Book">6</ref-type>
+      <contributors>
+        <authors>
+          <author>Zhu, Vivien Jiaqian</author>
+        </authors>
+        <editors>
+          <editor>Lungu, Irina</editor>
+        </editors>
+      </contributors>
+      <titles>
+        <title>SINO-JAPANESE LITERATURE IN PERSPECTIVE: A Short Communication to the World Literature</title>
+      </titles>
+      <publisher>Eliva Press</publisher>
+      <pages>207</pages>
+      <isbn>9999338631</isbn>
+      <isbn>9789999338639</isbn>
+      <dates>
+        <year>2026</year>
+      </dates>
+      <urls>
+        <url>https://openlibrary.org/books/OL62100651M/SINO-JAPANESE_LITERATURE_IN_PERSPECTIVE</url>
+      </urls>
+      <notes>Consolidated metadata from OpenLibrary, Amazon, Kyobo; cover pointer: books/covers/sino-japanese/README.txt</notes>
+    </record>
+  </records>
+</xml>
