@@ -21,6 +21,7 @@
     },
     "weight_approx_g": 286
   },
+  "cover_pointer_readme": "books/covers/sino-japanese/README.txt",
   "sources": [
     {
       "source": "OpenLibrary",
@@ -30,7 +31,8 @@
         "https://covers.openlibrary.org/b/OLID/OL62100651M-L.jpg",
         "https://covers.openlibrary.org/b/OLID/OL62100651M-M.jpg",
         "https://covers.openlibrary.org/b/OLID/OL62100651M-S.jpg"
-      ]
+      ],
+      "cover_pointer_file": "books/covers/sino-japanese/README.txt"
     },
     {
       "source": "Amazon Canada",
@@ -49,6 +51,7 @@
       "cover_image_urls": [
         "https://images-na.ssl-images-amazon.com/images/I/PLACEHOLDER.jpg"
       ],
+      "cover_pointer_file": "books/covers/sino-japanese/README.txt",
       "note": "Amazon product image URL is retailer-hosted; include direct image URL if you want the actual file saved locally. Placeholder used here if automated retrieval is blocked."
     },
     {
@@ -64,6 +67,7 @@
       "cover_image_urls": [
         "https://product.kyobobook.co.kr/PLACEHOLDER_COVER.jpg"
       ],
+      "cover_pointer_file": "books/covers/sino-japanese/README.txt",
       "note": "Kyobo product pages often host cover images; direct image URL may require an extra request.",
       "retailer_metadata_language": "listed as 'Jiaqian Zhu, Vivien'"
     },
@@ -77,7 +81,8 @@
       "cover_image_source": "retailer product page",
       "cover_image_urls": [
         "https://kogan.com/PLACEHOLDER_COVER.jpg"
-      ]
+      ],
+      "cover_pointer_file": "books/covers/sino-japanese/README.txt"
     }
   ],
   "notes": "Consolidated from retailer listings (Amazon, Kyobo, Kogan), Open Library page reference, and academic listings (PhilPapers/PhilArchive). Minor differences: page counts (207 vs 208), publisher metadata consistent (Eliva Press), editor Irina Lungu mentioned in some academic sources. Retailer-sourced cover image URLs may require direct scraping or manual retrieval; placeholders indicate where to fetch the actual image file for local storage.",
