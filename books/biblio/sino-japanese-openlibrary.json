@@ -1,0 +1,20 @@
+{
+  "id": "sino-japanese-openlibrary",
+  "source": "OpenLibrary",
+  "url": "https://openlibrary.org/books/OL62100651M/SINO-JAPANESE_LITERATURE_IN_PERSPECTIVE",
+  "note": "Open Library page exists; automated JSON record was not available at retrieval time.",
+  "title": "SINO-JAPANESE LITERATURE IN PERSPECTIVE: A Short Communication to the World Literature",
+  "author": "Vivien Jiaqian Zhu",
+  "publisher": "Eliva Press",
+  "publication_year": 2026,
+  "identifiers": {
+    "isbn_10": "9999338631",
+    "isbn_13": "9789999338639"
+  },
+  "cover_image_urls": [
+    "https://covers.openlibrary.org/b/OLID/OL62100651M-L.jpg",
+    "https://covers.openlibrary.org/b/OLID/OL62100651M-M.jpg",
+    "https://covers.openlibrary.org/b/OLID/OL62100651M-S.jpg"
+  ],
+  "retrieved_at": "2026-06-19T12:00:00Z"
+}
