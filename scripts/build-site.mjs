@@ -4,6 +4,7 @@ import path from 'node:path';
 const rootDir = process.cwd();
 const distDir = path.join(rootDir, 'dist');
 const wixConfig = JSON.parse(readFileSync(path.join(rootDir, 'wix.config.json'), 'utf8'));
+const siteName = path.basename(rootDir);
 
 const countFiles = (targetDir) => {
   const absoluteDir = path.join(rootDir, targetDir);
@@ -49,7 +50,7 @@ const html = `<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>my-site-1 build artifact</title>
+    <title>${siteName} build artifact</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -72,7 +73,7 @@ const html = `<!doctype html>
   </head>
   <body>
     <main>
-      <h1>my-site-1 build artifact</h1>
+      <h1>${siteName} build artifact</h1>
       <p>This repository is a Wix site project, so the CI build publishes a lightweight artifact for deployment previews and workflow validation.</p>
       <ul>
         <li><strong>Site ID:</strong> <code>${buildSummary.siteId}</code></li>
