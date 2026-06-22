@@ -8,4 +8,13 @@ if (process.env.CI || process.env.SKIP_WIX_SYNC_TYPES === '1') {
 const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 const result = spawnSync(command, ['wix', 'sync-types'], { stdio: 'inherit' });
 
-process.exit(result.status ?? 1);
+if (result.error) {
+  throw result.error;
+}
+
+if (typeof result.status === 'number') {
+  process.exit(result.status);
+}
+
+console.error(`wix sync-types terminated unexpectedly${result.signal ? ` with signal ${result.signal}` : ''}.`);
+process.exit(1);
