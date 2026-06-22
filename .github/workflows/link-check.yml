@@ -1,0 +1,127 @@
+name: Link Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build site artifact
+        run: npm run build
+
+      - name: Prepare report directory
+        run: mkdir -p reports/lychee
+
+      - name: Check links
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
+        continue-on-error: true
+        with:
+          args: >-
+            --no-progress
+            --verbose
+            --accept 200,206,429
+            --format markdown
+            --output reports/lychee/report.md
+            dist/index.html
+
+      - name: Add workflow summary
+        run: |
+          {
+            echo "## Link check"
+            echo
+            if [ "${{ steps.lychee.outcome }}" = "success" ]; then
+              echo "✅ No broken links detected in built HTML files."
+            else
+              echo "❌ Broken links detected. See the attached report artifact for details."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ensure link report exists
+        if: always()
+        run: |
+          if [ ! -f reports/lychee/report.md ]; then
+            cat <<'EOF' > reports/lychee/report.md
+            ## Link Check
+
+            No link report was generated.
+            EOF
+          fi
+
+      - name: Upload link check artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-check-report
+          path: reports/lychee
+          if-no-files-found: error
+
+      - name: Comment on pull request
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        env:
+          LINK_CHECK_MARKER: <!-- link-check-report -->
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = process.env.LINK_CHECK_MARKER;
+            const reportPath = 'reports/lychee/report.md';
+            const status = '${{ steps.lychee.outcome }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const report = fs.existsSync(reportPath)
+              ? fs.readFileSync(reportPath, 'utf8').slice(0, 60000)
+              : 'No report was generated.';
+            const body = `${marker}
+            ## Link Check ${status}
+
+            ${report}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find((comment) => comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail on broken links
+        if: steps.lychee.outcome != 'success'
+        run: |
+          echo "Critical link failures were detected."
+          exit 1

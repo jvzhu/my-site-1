@@ -3,4 +3,6 @@ node_modules/
 .vscode/
 .idea/
 .wix/
+.lighthouseci/
+dist/
 jsconfig.json
