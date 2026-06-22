@@ -1,0 +1,193 @@
+name: Lighthouse Performance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  LIGHTHOUSE_BASELINE_PERFORMANCE: 0.7
+  LIGHTHOUSE_BASELINE_ACCESSIBILITY: 0.9
+  LIGHTHOUSE_BASELINE_BEST_PRACTICES: 0.8
+  LIGHTHOUSE_BASELINE_SEO: 0.8
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4.0.4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build site artifact
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          python3 -m http.server 4173 --directory dist >/tmp/lighthouse-server.log 2>&1 &
+          echo $! > /tmp/lighthouse-server.pid
+          for attempt in $(seq 1 10); do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Preview server failed to start."
+          cat /tmp/lighthouse-server.log
+          exit 1
+
+      - name: Run Lighthouse CI
+        id: lighthouse
+        continue-on-error: true
+        run: |
+          mkdir -p reports/lighthouse
+          set +e
+          npx @lhci/cli@0.15.1 collect \
+            --url=http://127.0.0.1:4173/ \
+            --numberOfRuns=3 \
+            --settings.chromeFlags="--no-sandbox"
+          collect_status=$?
+          assert_status=0
+          upload_status=0
+
+          if [ "$collect_status" -eq 0 ]; then
+            npx @lhci/cli@0.15.1 assert --preset=lighthouse:recommended
+            assert_status=$?
+            npx @lhci/cli@0.15.1 upload --target=filesystem --outputDir=reports/lighthouse
+            upload_status=$?
+          fi
+
+          if [ "$collect_status" -ne 0 ]; then
+            exit "$collect_status"
+          fi
+
+          if [ "$assert_status" -ne 0 ]; then
+            exit "$assert_status"
+          fi
+
+          exit "$upload_status"
+
+      - name: Build Lighthouse summary
+        if: always()
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const manifestPath = path.join('reports', 'lighthouse', 'manifest.json');
+          const summaryPath = path.join('reports', 'lighthouse-summary.md');
+
+          if (!fs.existsSync(manifestPath)) {
+            fs.writeFileSync(summaryPath, '## Lighthouse Performance\n\nNo Lighthouse report was generated.\n');
+            process.exit(0);
+          }
+
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          const representativeRun = manifest.find((entry) => entry.isRepresentativeRun) || manifest[0];
+          const categories = representativeRun.summary || {};
+          const baselines = {
+            performance: Number(process.env.LIGHTHOUSE_BASELINE_PERFORMANCE),
+            accessibility: Number(process.env.LIGHTHOUSE_BASELINE_ACCESSIBILITY),
+            'best-practices': Number(process.env.LIGHTHOUSE_BASELINE_BEST_PRACTICES),
+            seo: Number(process.env.LIGHTHOUSE_BASELINE_SEO),
+          };
+
+          const rows = ['| Category | Score | Baseline | Delta |', '| --- | ---: | ---: | ---: |'];
+
+          for (const [key, baseline] of Object.entries(baselines)) {
+            const score = Number(categories[key] ?? 0);
+            const delta = (score - baseline).toFixed(2);
+            rows.push(`| ${key} | ${(score * 100).toFixed(0)} | ${(baseline * 100).toFixed(0)} | ${delta} |`);
+          }
+
+          const body = [
+            '## Lighthouse Performance',
+            '',
+            '${{ steps.lighthouse.outcome }}' === 'success'
+              ? '✅ Lighthouse checks passed.'
+              : '❌ Lighthouse checks failed. Review the artifact for details.',
+            '',
+            ...rows,
+            '',
+            `Audited URL: ${representativeRun.url}`,
+            `Representative report: ${representativeRun.htmlPath}`,
+          ].join('\n');
+
+          fs.writeFileSync(summaryPath, `${body}\n`);
+          EOF
+          cat reports/lighthouse-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: lighthouse-report
+          path: reports
+          if-no-files-found: error
+
+      - name: Comment on pull request
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7.0.1
+        env:
+          LIGHTHOUSE_MARKER: <!-- lighthouse-report -->
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = process.env.LIGHTHOUSE_MARKER;
+            const summaryPath = 'reports/lighthouse-summary.md';
+            const summary = fs.existsSync(summaryPath)
+              ? fs.readFileSync(summaryPath, 'utf8').slice(0, 60000)
+              : 'No Lighthouse summary was generated.';
+            const body = `${marker}
+            ${summary}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find((comment) => comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          if [ -f /tmp/lighthouse-server.pid ]; then
+            kill "$(cat /tmp/lighthouse-server.pid)" || true
+          fi
+
+      - name: Fail on Lighthouse regression
+        if: steps.lighthouse.outcome != 'success'
+        run: |
+          echo "Lighthouse assertions did not meet the configured baseline."
+          exit 1
